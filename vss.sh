@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # WARNING! this script is trying to be generic, but not very well, bottom line, not likely to work for any other case that mine :(
+
 # get file glob
 TARGET=$1
 if [ -z "$TARGET" ]; then
@@ -20,6 +21,7 @@ if [ -z "$TSECONDS" ]; then
   exit
 fi
 echo splice in $TSECONDS second chunks
+temppre="/tmp/vss-"
 # for each file name in the array calculate the time start and time end values
 from=0
 to=$TSECONDS
@@ -30,13 +32,10 @@ MAXS=$(mplayer -vo null -ao null -frames 0 -identify "$singlefile" 2>/dev/null |
 echo "video lengh to work with $MAXS"
 # execute ffmpeg to splice out that chunk
 
+rm -i ${temppre}*
 
-
-
+COUNTER=0
 # generate $splicename and build indexes
-
-
-
 
 
 for file in ${FILELIST[@]}; do
@@ -44,11 +43,16 @@ for file in ${FILELIST[@]}; do
     buto=$to
     to=$MAXS
     echo extra splicing $file $from $to
-    ffmpeg -i "$file" -ss 00:00:03 -to 00:00:08 -async 1 -strict -2 "$splicename"
+    splicename=$(printf "${temppre}%05d.mp4" $COUNTER)
+    ffmpeg -i "$file" -ss 00:00:$from -to 00:00:$to -async 1 -strict -2 "$splicename"
+    COUNTER=$(($COUNTER + 1))
     to=$buto
     from=0
   fi
   echo splicing $file $from $to
+  splicename=$(printf "${temppre}%05d.mp4" $COUNTER)
+  ffmpeg -i "$file" -ss 00:00:$from -to 00:00:$to -async 1 -strict -2 "$splicename"
+  COUNTER=$(($COUNTER + 1))
   from=$to
   to=$(($to + $TSECONDS))
   if [ $to -gt $MAXS ]; then
